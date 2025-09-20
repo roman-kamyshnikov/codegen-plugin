@@ -10,4 +10,13 @@
     <extensions defaultExtensionNs="org.jetbrains.kotlin">
         <supportsKotlinPluginMode supportsK2="true"/>
     </extensions>
+
+    <actions>
+        <action class="dev.roman.kamyshnikov.codegen.selectFunction.ShowSelectFunctionDialogAction"
+                description="Generate data-layer code"
+                text="Codegen"
+                icon="AllIcons.Actions.GeneratedFolder">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+        </action>
+    </actions>
 </idea-plugin>
