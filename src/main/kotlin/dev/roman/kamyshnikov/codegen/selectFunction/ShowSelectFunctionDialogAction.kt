@@ -5,11 +5,19 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.roots.ProjectFileIndex
+import com.intellij.psi.PsiDirectory
+import dev.roman.kamyshnikov.codegen.di.ServiceLocator
 
 class ShowSelectFunctionDialogAction : AnAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
-        TODO("show dialog")
+        val project = e.project ?: return
+        val targetDirectory = e.getData(CommonDataKeys.PSI_ELEMENT) as? PsiDirectory ?: return
+
+        ServiceLocator.init(project)
+        ServiceLocator.getSelectFunctionDialog { apiFunction ->
+            TODO("Generate code for $apiFunction in $targetDirectory")
+        }.show()
     }
 
     override fun update(e: AnActionEvent) {
