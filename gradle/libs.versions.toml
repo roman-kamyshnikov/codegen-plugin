@@ -1,0 +1,9 @@
+[versions]
+intelliJPlatform = "2.9.0" # https://plugins.gradle.org/plugin/org.jetbrains.intellij.platform
+kotlin = "2.2.20" # https://plugins.gradle.org/plugin/org.jetbrains.kotlin.jvm
+
+[libraries]
+
+[plugins]
+intelliJPlatform = { id = "org.jetbrains.intellij.platform", version.ref = "intelliJPlatform" }
+kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
