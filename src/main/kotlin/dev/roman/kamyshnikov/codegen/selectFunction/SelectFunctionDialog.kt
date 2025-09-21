@@ -5,10 +5,8 @@ import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.ValidationInfo
 import com.intellij.ui.TextFieldWithAutoCompletion
 import com.intellij.ui.TextFieldWithAutoCompletionListProvider
-import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.ui.dsl.builder.selected
 import dev.roman.kamyshnikov.codegen.res.R
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import javax.swing.JComponent
@@ -31,7 +29,6 @@ class SelectFunctionDialog(
     }
 
     private lateinit var functionNameTextField: TextFieldWithAutoCompletion<KtNamedFunction>
-    private lateinit var addCacheCheckBox: JBCheckBox
 
     private var selectedApiFunction: KtNamedFunction? = null
 
@@ -70,13 +67,6 @@ class SelectFunctionDialog(
                     .validationOnInput {
                         isOKActionEnabled = true
                         return@validationOnInput null
-                    }
-            }
-            row {
-                checkBox(R.strings.cache_checkbox_label)
-                    .also {
-                        it.selected(true)
-                        addCacheCheckBox = it.component
                     }
             }
         }
