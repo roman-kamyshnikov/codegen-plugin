@@ -4,6 +4,7 @@ object Config {
     object Input {
         var apiFileSuffix = "Api.kt"
         var apiPackagePrefix = "dev.roman.kamyshnikov.codegen.samples.core.network.apis."
+        var dataLayerModelFqNamePrefix = "dev.roman.kamyshnikov.codegen.samples.core.network.models."
         var unwrapRetrofitResponse = true
     }
 
@@ -14,5 +15,9 @@ object Config {
 
     object Service {
         const val NOTIFICATION_GROUP_ID = "dev.roman.kamyshnikov.codegen"
+    }
+
+    object Constants {
+        const val KOTLIN_LIST_FQ_NAME = "kotlin.collections.List"
     }
 }

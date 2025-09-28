@@ -14,7 +14,10 @@ import dev.roman.kamyshnikov.codegen.Config
 import dev.roman.kamyshnikov.codegen.di.ServiceLocator
 import dev.roman.kamyshnikov.codegen.generation.models.CodegenDir
 import dev.roman.kamyshnikov.codegen.res.R
+import org.jetbrains.kotlin.analysis.api.permissions.KaAllowAnalysisOnEdt
+import org.jetbrains.kotlin.analysis.api.permissions.allowAnalysisOnEdt
 
+@OptIn(KaAllowAnalysisOnEdt::class)
 class ShowSelectFunctionDialogAction : AnAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
@@ -27,10 +30,13 @@ class ShowSelectFunctionDialogAction : AnAction() {
             val generator = serviceLocator.getCodeGenerator()
 
             try {
-                generator.generate(
-                    targetDir = CodegenDir.from(psiDirectory = targetDirectory),
-                    apiFunction = apiFunction,
-                )
+                allowAnalysisOnEdt {
+                    generator.generate(
+                        targetDir = CodegenDir.from(psiDirectory = targetDirectory),
+                        apiFunction = apiFunction,
+                    )
+                }
+
                 project.showNotification(message = R.strings.generation_success_message, type = NotificationType.INFORMATION)
             } catch (exception: Exception) {
                 project.showNotification(message = R.strings.generation_error_message, type = NotificationType.ERROR)
