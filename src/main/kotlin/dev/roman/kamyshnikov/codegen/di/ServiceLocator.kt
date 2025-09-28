@@ -2,6 +2,7 @@ package dev.roman.kamyshnikov.codegen.di
 
 import com.intellij.openapi.project.Project
 import dev.roman.kamyshnikov.codegen.generation.CodeGenerator
+import dev.roman.kamyshnikov.codegen.generation.DomainModelGenerator
 import dev.roman.kamyshnikov.codegen.generation.GenerationQueue
 import dev.roman.kamyshnikov.codegen.selectFunction.ApiFunctionProvider
 import dev.roman.kamyshnikov.codegen.selectFunction.SelectFunctionDialog
@@ -26,5 +27,12 @@ class ServiceLocator(private val project: Project) {
         onFunctionSelected = onFunctionSelected,
     )
 
-    fun getCodeGenerator() = CodeGenerator()
+    fun getCodeGenerator() = CodeGenerator(
+        domainModelGenerator = getDomainModelGenerator(),
+        generationQueue = getGenerationQueue(),
+    )
+
+    private fun getDomainModelGenerator() = DomainModelGenerator(
+        generationQueue = getGenerationQueue(),
+    )
 }
