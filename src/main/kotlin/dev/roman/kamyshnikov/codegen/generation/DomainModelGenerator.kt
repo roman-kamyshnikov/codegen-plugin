@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.idea.base.psi.kotlinFqName
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtEnumEntry
 import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtPsiFactory
 import org.jetbrains.kotlin.psi.KtTypeReference
@@ -70,8 +71,12 @@ class DomainModelGenerator(
                             dataLayerKtClassOrObject.convertToDomainDataClass(targetDir)
                         }
 
+                        dataLayerKtClassOrObject.hasModifier(KtTokens.ENUM_KEYWORD) -> {
+                            dataLayerKtClassOrObject.convertToDomainEnumClass(targetDir)
+                        }
+
                         else -> {
-                            throw IllegalArgumentException("Cannot convert class ${dataLayerKtClassOrObject.fqName?.asString()}. Only data classes are supported.")
+                            throw IllegalArgumentException("Cannot convert class ${dataLayerKtClassOrObject.fqName?.asString()}. Only data and enum classes are supported.")
                         }
                     }
 
@@ -191,7 +196,109 @@ class DomainModelGenerator(
             false -> onFallback()
         }
     }
+
+    private fun KtClassOrObject.convertToDomainEnumClass(
+        targetDir: CodegenDir,
+        newClassName: String = this.nameAsSafeName.asString().removeVersionSuffix(),
+        kDoc: String? = null,
+    ): KtClass {
+        val newFile = generationQueue.getOrCreateInMemoryFile(targetDir, "$newClassName.kt")
+
+        val newParameters = this.primaryConstructor?.valueParameters.orEmpty()
+            .onEach { ktParameter ->
+                val ktTypeReference = ktParameter.typeReference!!
+                analyze(ktTypeReference) {
+                    val kaType = ktTypeReference.type as KaClassType
+                    if (kaType.isProjectClass) throw IllegalArgumentException("Project classes are not allowed in Enum constructor.")
+                    if (kaType.hasTypeArguments) throw IllegalArgumentException("Classes with type arguments are not allowed in Enum constructor.")
+                }
+            }
+            .map { deepCloneParameter(it, targetDir) }
+
+        val newEntries = this.body?.enumEntries.orEmpty()
+
+        return newFile.declarations
+            .filterIsInstance<KtClass>()
+            .singleOrNull { existingClass -> existingClass.name == newClassName }
+            ?.let { existingClass ->
+                checkIfParametersMatchOrFallback(
+                    existingParameters = existingClass.primaryConstructor?.valueParameters.orEmpty(),
+                    newParameters = newParameters,
+                    onMatch = { existingClass },
+                    onFallback = {
+                        convertToDomainEnumClass(
+                            targetDir = targetDir,
+                            newClassName = newClassName + "_NEW",
+                            kDoc = """
+                                |/**
+                                | * TODO: Class [${existingClass.fqName?.asString()}] already exists, but has different constructor parameters! Please merge the files manually.
+                                | *  Original class - [${this.fqName?.asString()}]
+                                | */
+                            """.trimMargin(),
+                        )
+                    }
+                )
+            }
+            ?.let { existingClass ->
+                checkIfEntriesMatchOrFallback(
+                    existingEntries = existingClass.body?.enumEntries.orEmpty(),
+                    newEntries = newEntries,
+                    onMatch = { existingClass },
+                    onFallback = {
+                        convertToDomainEnumClass(
+                            targetDir = targetDir,
+                            newClassName = newClassName + "_NEW",
+                            kDoc = """
+                                |/**
+                                | * TODO: Class [${existingClass.fqName?.asString()}] already exists, but has different enum entries! Please merge the files manually.
+                                | *  Original class - [${this.fqName?.asString()}]
+                                | */
+                            """.trimMargin(),
+                        )
+                    }
+                )
+            }
+            ?: run {
+                val constructor = newParameters
+                    .takeIf { it.isNotEmpty() }
+                    ?.joinToString(separator = ",\n", prefix = "(", postfix = ")") { it.text }
+                    ?: ""
+                val entries = newEntries
+                    .joinToString(separator = ",\n", postfix = ";") { it.nameIdentifier?.text + (it.initializerList?.text ?: "") }
+
+                val clazz = KtPsiFactory(this.project, markGenerated = true).createClass(
+                    """
+                        |$kDoc
+                        |enum class $newClassName$constructor {
+                        |    $entries
+                        |}
+                    """.trimMargin()
+                )
+                val newClass = newFile.add(clazz) as KtClass
+                generationQueue.addFile(targetDir.path, newFile)
+
+                return@run newClass
+            }
+    }
+
+    private fun checkIfEntriesMatchOrFallback(
+        existingEntries: List<KtEnumEntry>,
+        newEntries: List<KtEnumEntry>,
+        onMatch: () -> KtClass,
+        onFallback: () -> KtClass,
+    ): KtClass {
+        val existing = existingEntries.map { it.nameIdentifier?.text + it.initializerList?.text }.toSet()
+        val new = newEntries.map { it.nameIdentifier?.text + it.initializerList?.text }.toSet()
+
+        return when (existing == new) {
+            true -> onMatch()
+            false -> onFallback()
+        }
+    }
 }
+
+private val KaClassType.isProjectClass: Boolean
+    get() = this.requireKotlinFqName.startsWith(Config.Input.projectPrefix)
 
 private val KaClassType.isDataLayerModel: Boolean
     get() = this.requireKotlinFqName.startsWith(Config.Input.dataLayerModelFqNamePrefix)
